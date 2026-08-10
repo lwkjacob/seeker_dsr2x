@@ -244,28 +244,6 @@ On the real unit a power-on throws your zones back to the factory positions. Her
 even then the first switch-on after a restart still restores what you had, since every
 session has to start with one.
 
-## Calibrating the digit windows
-
-`/seeker2x_windows` lets you line the five digit windows up against the radar artwork. Only
-needed if you've replaced the artwork.
-
-| Input | Effect |
-| --- | --- |
-| click | Select a window |
-| drag | Move it |
-| arrows | Nudge 0.1% (shift → 1%) |
-| scroll | Digit size |
-| shift + scroll | Box width |
-| ctrl + scroll | Box height |
-| alt + scroll | Letter spacing |
-| `A` | Apply the selected size to all five |
-| `R` | Reset the selected window |
-| Show CSS | Print a paste-ready block |
-| ESC | Exit |
-
-Paste the exported block over the matching rules in `nui/style.css` to keep it. Everything is
-stored as a percentage, so a calibration done at one size is right at every size.
-
 ## For developers
 
 Client exports:
