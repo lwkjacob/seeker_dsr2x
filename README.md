@@ -1,6 +1,6 @@
 # SEEKER DSR 2X
 
-![LWK Radar](nui/images/seeker_dsr2x_base)
+![LWK Radar](nui/images/seeker_dsr2x_base.png)
 
 A FiveM police radar modelled on the **STALKER DUAL DSR 2X**.
 
