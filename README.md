@@ -1,5 +1,7 @@
 # SEEKER DSR 2X
 
+![LWK Radar](nui/images/seeker_dsr2x_base)
+
 A FiveM police radar modelled on the **STALKER DUAL DSR 2X**.
 
 Two antennas run at the same time, each with its own windows — so a car closing from the
