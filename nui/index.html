@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seeker DSR 2X</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="radar-container" class="radar-container">
+        <div class="radar-inner">
+            <img src="images/seeker_dsr2x_base.png" alt="Base" class="radar-base" id="radar-base">
+
+            <!-- Top row = FRONT antenna -->
+            <img src="images/top_same_on.png"  alt="" class="radar-overlay" id="ov-top-same">
+            <img src="images/top_opp_on.png"   alt="" class="radar-overlay" id="ov-top-opp">
+            <img src="images/top_xmit_on.png"  alt="" class="radar-overlay" id="ov-top-xmit">
+            <img src="images/top_front_on.png" alt="" class="radar-overlay" id="ov-top-front">
+            <img src="images/top_rear_on.png"  alt="" class="radar-overlay" id="ov-top-rear">
+            <img src="images/top_fast_on.png"  alt="" class="radar-overlay" id="ov-top-fast">
+            <img src="images/top_lock_on.png"  alt="" class="radar-overlay" id="ov-top-lock">
+            <img src="images/target_top_front_arrow_on.png" alt="" class="radar-overlay" id="ov-top-targetFrontArrow">
+            <img src="images/target_top_rear_arrow_on.png"  alt="" class="radar-overlay" id="ov-top-targetRearArrow">
+            <img src="images/fast_top_front_arrow_on.png"   alt="" class="radar-overlay" id="ov-top-fastFrontArrow">
+            <img src="images/fast_top_rear_arrow_on.png"    alt="" class="radar-overlay" id="ov-top-fastRearArrow">
+
+            <!-- Bottom row = REAR antenna -->
+            <img src="images/bottom_same_on.png"  alt="" class="radar-overlay" id="ov-bottom-same">
+            <img src="images/bottom_opp_on.png"   alt="" class="radar-overlay" id="ov-bottom-opp">
+            <img src="images/bottom_xmit_on.png"  alt="" class="radar-overlay" id="ov-bottom-xmit">
+            <img src="images/bottom_front_on.png" alt="" class="radar-overlay" id="ov-bottom-front">
+            <img src="images/bottom_rear_on.png"  alt="" class="radar-overlay" id="ov-bottom-rear">
+            <img src="images/bottom_fast_on.png"  alt="" class="radar-overlay" id="ov-bottom-fast">
+            <img src="images/bottom_lock_on.png"  alt="" class="radar-overlay" id="ov-bottom-lock">
+            <img src="images/target_bottom_front_arrow_on.png" alt="" class="radar-overlay" id="ov-bottom-targetFrontArrow">
+            <img src="images/target_bottom_rear_arrow_on.png"  alt="" class="radar-overlay" id="ov-bottom-targetRearArrow">
+            <img src="images/fast_bottom_front_arrow_on.png"   alt="" class="radar-overlay" id="ov-bottom-fastFrontArrow">
+            <img src="images/fast_bottom_rear_arrow_on.png"    alt="" class="radar-overlay" id="ov-bottom-fastRearArrow">
+
+            <!-- Five windows: two per row plus the shared patrol speed.
+                 data-label names the box in calibration mode (/seeker2x_windows). -->
+            <div class="win win-target win-top    digit-container" id="win-top-target"    data-label="TOP TARGET"></div>
+            <div class="win win-middle win-top    digit-container" id="win-top-middle"    data-label="TOP FAST/LOCK"></div>
+            <div class="win win-target win-bottom digit-container" id="win-bottom-target" data-label="BOTTOM TARGET"></div>
+            <div class="win win-middle win-bottom digit-container" id="win-bottom-middle" data-label="BOTTOM FAST/LOCK"></div>
+            <div class="win win-patrol            digit-container" id="win-patrol"        data-label="PATROL"></div>
+
+            <!-- PWR lives on the radar art; moves/scales with /seeker2x_move, not the remote -->
+            <button type="button" id="btn-power-radar" class="radar-power-hit" data-action="power" title="POWER" aria-label="Power"></button>
+        </div>
+        <div id="adjust-hint" class="adjust-hint" style="display: none">Drag to move, scroll to scale. ESC exits move mode.</div>
+    </div>
+
+    <!-- Plate Reader Overlay -->
+    <div id="plate-reader" class="plate-reader">
+        <img src="images/plates/platereader.png" alt="Plate Reader" class="plate-reader-frame">
+        <div class="plate-slot plate-front">
+            <img id="plate-front-bg" src="images/plates/0.png" alt="Front Plate" class="plate-bg">
+            <div id="plate-front-text" class="plate-text"><span class="plate-text-inner">--------</span></div>
+            <div id="plate-front-locked" class="plate-locked">LOCKED</div>
+        </div>
+        <div class="plate-slot plate-rear">
+            <img id="plate-rear-bg" src="images/plates/0.png" alt="Rear Plate" class="plate-bg">
+            <div id="plate-rear-text" class="plate-text"><span class="plate-text-inner">--------</span></div>
+            <div id="plate-rear-locked" class="plate-locked">LOCKED</div>
+        </div>
+    </div>
+
+    <!--
+        Remote Control Overlay.
+
+        The 2X remote gives each antenna its own trio of keys, so every button below carries a
+        data-row of top (FRONT) or bottom (REAR).
+
+        Only the Hold key is underlined on the real keypad, and that underline is the manual's
+        notation for "this key has a press-and-hold function" (two beeps on the second action).
+        So data-hold-action appears on exactly the two centre keys and nowhere else on the
+        hardware's own functions — MENU's hold is this port's own addition, opening the ox_lib
+        settings that have no counterpart on a real DSR 2X.
+
+        The four Target Zone keys are short-press only and modal (manual p.12): the first press
+        selects that lane's target zone, and once selected the same key becomes Fast Lk/Rel.
+        In any menu the centre keys become up/down and any zone key exits back to radar mode.
+    -->
+    <div id="remote-overlay" class="remote-overlay">
+        <div class="remote-wrap" id="remote-wrap">
+            <img src="images/seeker_dsr2x_remote.png" alt="Remote" class="remote-img" draggable="false">
+            <div id="remote-adjust-hint" class="remote-adjust-hint">Drag to move, scroll to scale. Double-click to finish.</div>
+
+            <button class="remote-btn" id="btn-mov-sta" data-action="movSta" title="MOV/STA &mdash; START/STOP in Stopwatch Mode">MOV/STA</button>
+
+            <button class="remote-btn" id="btn-top-opp"   data-action="oppZone"  data-row="top"    title="FRONT OPP zone &mdash; once selected, Lk/Rel">OPP</button>
+            <button class="remote-btn" id="btn-top-strg"  data-action="strgLock" data-row="top"    title="FRONT HOLD &mdash; up in menus">HOLD</button>
+            <button class="remote-btn" id="btn-top-same"  data-action="sameZone" data-row="top"    title="FRONT SAME zone &mdash; once selected, Lk/Rel">SAME</button>
+
+            <button class="remote-btn" id="btn-bot-opp"   data-action="oppZone"  data-row="bottom" title="REAR OPP zone &mdash; once selected, Lk/Rel">OPP</button>
+            <button class="remote-btn" id="btn-bot-strg"  data-action="strgLock" data-row="bottom" title="REAR HOLD &mdash; down in menus">HOLD</button>
+            <button class="remote-btn" id="btn-bot-same"  data-action="sameZone" data-row="bottom" title="REAR SAME zone &mdash; once selected, Lk/Rel">SAME</button>
+
+            <button class="remote-btn" id="btn-menu"     data-action="menu" data-hold-action="menu" title="MENU &mdash; Operator Menu &mdash; hold: script settings">MENU</button>
+            <button class="remote-btn" id="btn-vol-test" data-action="volTest" data-hold-action="volTest" title="VOLUME &mdash; hold: SELF TEST">VOL</button>
+            <button class="remote-btn" id="btn-ps-blank" data-action="psBlank" title="PS BLANK">BLANK</button>
+
+            <button id="debug-export" class="debug-export-btn" style="display:none" onclick="exportButtonCSS()">Copy CSS</button>
+            <textarea id="debug-output" class="debug-output" style="display:none" readonly></textarea>
+        </div>
+    </div>
+
+    <!-- Window calibration HUD. Hidden unless /seeker2x_windows is active. -->
+    <div id="win-debug-panel" class="win-debug-panel">
+        <h4>WINDOW CALIBRATION</h4>
+        <div>Click a window to select it.</div>
+        <div><kbd>drag</kbd> move &nbsp; <kbd>&larr;&uarr;&rarr;&darr;</kbd> nudge (<kbd>shift</kbd> &times;10)</div>
+        <div><kbd>scroll</kbd> glyph size &nbsp; <kbd>shift</kbd>+scroll width</div>
+        <div><kbd>ctrl</kbd>+scroll height &nbsp; <kbd>alt</kbd>+scroll tracking</div>
+        <div><kbd>A</kbd> apply selected size to all windows</div>
+        <div><kbd>R</kbd> reset selected &nbsp; <kbd>esc</kbd> exit</div>
+        <div class="win-debug-sel" id="win-debug-sel">none selected</div>
+        <button type="button" id="win-debug-export">Show CSS</button>
+        <textarea id="win-debug-output" readonly></textarea>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

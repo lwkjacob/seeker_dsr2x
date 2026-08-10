@@ -1,0 +1,618 @@
+@font-face {
+    font-family: 'Segment7';
+    src: url('font/Segment7Standard.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+}
+
+/* ===== Radar head ===== */
+/* Default box matches Config.displayDefaults (480x173); the base art is 832x300, same aspect. */
+.radar-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 480px;
+    height: 173px;
+    cursor: move;
+    user-select: none;
+    display: none;
+    transform-origin: top left;
+}
+
+.radar-container.visible {
+    display: block;
+}
+
+.radar-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.radar-base {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+/* Every lamp is a full-face sparse PNG, so it stacks 1:1 over the base with no offsets. */
+.radar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.radar-overlay.active {
+    opacity: 1;
+}
+
+/* ===== Seven-segment windows ===== */
+/* Rectangles measured off the base art (832x300) and expressed as percentages so the
+   digits track the face at any scale. */
+.win {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    padding: 0;
+
+    /* All five windows are the same size; only their left/top differ. */
+    width: 14.42%;
+    height: 16.33%;
+
+    /* Glyph height as a fraction of the window's own height, and the tracking between
+       characters. app.js reads these back and resolves --digit-ratio into a pixel font-size
+       whenever the head is resized, so the digits track the face at any size instead of
+       staying pinned to the root font size. Tune them with /seeker2x_windows.
+
+       Ratio is above 1, so the glyphs stand taller than the box. That is fine — the box is
+       only a positioning anchor for the absolutely-centred text and does not clip it. */
+    --digit-ratio: 1.06;
+    --digit-track: 0.15em;
+}
+
+.digit-container {
+    gap: 2px;
+}
+
+.digit-display {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segment7', monospace;
+    /* Fallback only — app.js overwrites this inline from --digit-ratio. */
+    font-size: 1.55em;
+    line-height: 1;
+    letter-spacing: var(--digit-track);
+    transform-origin: center center;
+}
+
+.digit-ghost,
+.digit-text {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* letter-spacing appends a gap after the LAST character too, so the text box is one
+       tracking wider than the glyphs. Centring the box therefore parks the glyphs half a
+       tracking left of centre; the +track/2 puts them back. */
+    transform: translate(calc(-50% + var(--digit-track) / 2), -50%);
+    white-space: pre;
+}
+
+/* Unlit segments, so the window never looks empty when a value is blank. */
+.digit-ghost {
+    opacity: 0.25;
+    color: currentColor;
+    text-shadow: 0 0 6px currentColor;
+    pointer-events: none;
+}
+
+.digit-text {
+    z-index: 1;
+}
+
+/* No shared `left` here: the two TARGET windows were judged separately and landed a tenth of
+   a percent apart. Their lefts live on the per-window rules below with their tops. */
+.win-target {
+    color: #ffcc00;
+}
+
+.win-target .digit-display {
+    text-shadow: 0 0 4px rgba(255, 204, 0, 0.5);
+}
+
+.win-middle {
+    left: 52.14%;
+    color: #ff2b2b;
+}
+
+.win-middle .digit-display {
+    text-shadow: 0 0 4px rgba(180, 0, 0, 0.55);
+}
+
+/*  Row offsets: the two antennas sit one above the other on the same face. All five values
+    here were dialled in by eye against the base art with /seeker2x_windows.
+
+    Do not try to re-derive them from the lamp overlays. It is tempting, because the window
+    recesses are pure black in the base art and the lamps are the only measurable geometry on
+    it — but the recesses are NOT positioned off the lamp stack. The three label slots per row
+    (SAME / OPP / XMIT, mirrored by FRONT REAR / FAST / LOCK) are 31.8% apart centre to centre,
+    while the digit windows are 26.7% apart. Aligning the windows to the middle lamp slot was
+    tried and is visibly wrong: it lifts the top row about 5% too high.
+
+    The two windows of a row differ by a few hundredths of a percent because each was judged
+    against the art on its own. That is the measurement, not a rounding error. The same goes
+    for the two TARGET lefts. */
+#win-top-target    { left: 21.67%; top: 29.72%; }
+#win-top-middle    {               top: 29.75%; }
+#win-bottom-target { left: 21.57%; top: 56.96%; }
+#win-bottom-middle {               top: 56.89%; }
+
+.win-patrol {
+    left: 71.01%;
+    top: 43.64%;
+    color: #7cff7c;
+}
+
+.win-patrol .digit-display {
+    text-shadow: 0 0 4px rgba(124, 255, 124, 0.5);
+}
+
+/* ===== Window calibration mode (/seeker2x_windows) ===== */
+/* Makes the five digit windows draggable so their boxes and glyph size can be dialled in
+   against the base art, then exported as a paste-ready CSS block.
+
+   Deliberately no outline, tint or name tag on the boxes: the whole job is judging where the
+   digits sit against the face, and any chrome drawn over the art is the thing you end up
+   aligning to instead. The HUD panel names the selected window. */
+.radar-container.win-debug .win {
+    pointer-events: auto;
+    cursor: move;
+}
+
+/* While calibrating, the head must not also be draggable as a whole. */
+.radar-container.win-debug {
+    cursor: default;
+}
+
+.win-debug-panel {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 40;
+    width: 320px;
+    padding: 10px 12px;
+    background: rgba(8, 14, 20, 0.94);
+    border: 1px solid rgba(0, 200, 255, 0.6);
+    border-radius: 6px;
+    color: #cfe9f5;
+    font: 11px/1.55 Consolas, 'Courier New', monospace;
+    user-select: none;
+}
+
+.win-debug-panel.active {
+    display: block;
+}
+
+.win-debug-panel h4 {
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #4fd8ff;
+}
+
+.win-debug-panel kbd {
+    display: inline-block;
+    min-width: 14px;
+    padding: 0 3px;
+    background: rgba(0, 200, 255, 0.16);
+    border: 1px solid rgba(0, 200, 255, 0.4);
+    border-radius: 3px;
+    text-align: center;
+    color: #eaf7ff;
+}
+
+.win-debug-panel .win-debug-sel {
+    margin-top: 6px;
+    color: #ffd34a;
+}
+
+.win-debug-panel button {
+    margin-top: 8px;
+    padding: 4px 10px;
+    background: rgba(0, 200, 255, 0.2);
+    border: 1px solid rgba(0, 200, 255, 0.6);
+    border-radius: 4px;
+    color: #eaf7ff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.win-debug-panel button:hover {
+    background: rgba(0, 200, 255, 0.35);
+}
+
+.win-debug-panel textarea {
+    display: none;
+    width: 100%;
+    height: 150px;
+    margin-top: 8px;
+    padding: 6px;
+    background: #05090d;
+    border: 1px solid rgba(0, 200, 255, 0.4);
+    border-radius: 4px;
+    color: #9fe6ff;
+    font: 10px/1.5 Consolas, 'Courier New', monospace;
+    resize: vertical;
+    white-space: pre;
+}
+
+.win-debug-panel textarea.active {
+    display: block;
+}
+
+.adjust-hint {
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Invisible click target over the PWR pad on the art (x69-114, y123-169 of 832x300).
+   With NUI unfocused use /seeker2x_power or Config.keybindPower. */
+.radar-power-hit {
+    position: absolute;
+    left: 8.29%;
+    top: 41.00%;
+    width: 5.53%;
+    height: 15.67%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    box-shadow: none;
+    font-size: 0;
+    color: transparent;
+    z-index: 50;
+    pointer-events: auto;
+    outline: none;
+    display: block;
+    text-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.radar-power-hit:hover,
+.radar-power-hit:active {
+    background: transparent;
+    border: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ===== Plate Reader ===== */
+/* Defaults match Config.plateReaderDefaults; init applies saved KVP. No translateX here —
+   inline scale() owns the transform. */
+.plate-reader {
+    position: fixed;
+    top: 3%;
+    left: 43%;
+    transform: none;
+    width: 278px;
+    height: 101px;
+    display: none;
+    pointer-events: none;
+    z-index: 5000;
+}
+
+.plate-reader.visible {
+    display: block;
+}
+
+.plate-reader.adjusting,
+.plate-reader.remote-layout-drag {
+    pointer-events: auto;
+    cursor: move;
+}
+
+.plate-reader-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.plate-slot {
+    position: absolute;
+    width: 40%;
+    height: 44%;
+    overflow: visible;
+}
+
+.plate-front {
+    left: 9.8%;
+    top: 20.5%;
+}
+
+.plate-rear {
+    right: 9.8%;
+    top: 20.5%;
+}
+
+.plate-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Plate number band only — sits below the header art on the plate PNG. */
+.plate-text {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 38%;
+    bottom: 8%;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    /* Light edge only — heavy glow blurs plate numbers at this size. */
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    font-weight: 700;
+    color: #111111;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+/* Measured for fit — flex parents report the full box, not the glyphs.
+   Do NOT set max-width here: it caps offsetWidth and breaks the JS fit loop. */
+.plate-text .plate-text-inner {
+    display: inline-block;
+    line-height: 1.05;
+    white-space: nowrap;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: geometricPrecision;
+}
+
+.plate-locked {
+    position: absolute;
+    left: 50%;
+    bottom: -22px;
+    z-index: 2;
+    transform: translateX(-50%);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    color: #5b1010;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.85);
+}
+
+.plate-locked.active {
+    color: #e11f1f;
+    text-shadow: 0 0 8px rgba(225, 31, 31, 0.7);
+}
+
+/* ===== Remote Control Overlay ===== */
+/* The full-screen layer must not steal clicks — the radar PWR pad and plate reader sit
+   "under" it. Only .remote-wrap and its buttons capture pointer events. */
+.remote-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.remote-overlay.active {
+    display: flex;
+}
+
+.remote-wrap {
+    position: relative;
+    width: 300px;
+    user-select: none;
+    pointer-events: auto;
+}
+
+/* Applied once the remote has a saved or dragged position. Until then the overlay's flex
+   centring handles it, which stays centred at any resolution. */
+.remote-wrap.positioned {
+    position: absolute;
+    transform-origin: top left;
+}
+
+.remote-wrap.adjusting {
+    cursor: move;
+    outline: 2px dashed rgba(255, 204, 0, 0.9);
+    outline-offset: 4px;
+}
+
+/* Buttons go inert while repositioning so a drag across the face can't fire an action. */
+.remote-wrap.adjusting .remote-btn {
+    pointer-events: none;
+}
+
+.remote-adjust-hint {
+    display: none;
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.remote-wrap.adjusting .remote-adjust-hint {
+    display: block;
+}
+
+.remote-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+    transition: filter 0.25s ease;
+}
+
+.remote-btn {
+    position: absolute;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    border-radius: 6px;
+    transition: background 0.1s ease;
+    font-size: 0;
+    color: transparent;
+}
+
+/* No hover state on purpose. The remote art is a photograph of a real keypad, and a wash over
+   one key reads as a rendering fault rather than a highlight — the cursor is already telling
+   you what you are over. Press feedback below is kept, since that is a thing the real keypad
+   does. Hitboxes are still visible for tuning via Config.remoteDebug. */
+
+.remote-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Lit while a press is past the hold threshold, so the operator can see the alternate
+   function armed before releasing. */
+.remote-btn.holding {
+    background: rgba(255, 204, 0, 0.35);
+}
+
+/* Button positions, measured off seeker_dsr2x_remote.png (332x612). */
+#btn-mov-sta   { top: 15.5%; left: 31.6%; width: 38.3%; height: 6.4%;  border-radius: 14px; }
+
+#btn-top-opp   { top: 28.6%; left: 20.5%; width: 16.0%; height: 8.8%;  border-radius: 8px; }
+#btn-top-strg  { top: 26.3%; left: 42.5%; width: 16.6%; height: 11.3%; border-radius: 8px; }
+#btn-top-same  { top: 28.6%; left: 65.1%; width: 16.3%; height: 8.8%;  border-radius: 8px; }
+
+#btn-bot-opp   { top: 42.0%; left: 20.8%; width: 15.7%; height: 8.2%;  border-radius: 8px; }
+#btn-bot-strg  { top: 41.2%; left: 42.8%; width: 16.3%; height: 11.3%; border-radius: 8px; }
+#btn-bot-same  { top: 42.0%; left: 65.1%; width: 16.3%; height: 8.0%;  border-radius: 8px; }
+
+#btn-menu      { top: 56.5%; left: 42.8%; width: 16.3%; height: 8.5%;  border-radius: 50%; }
+
+#btn-vol-test  { top: 67.5%; left: 20.2%; width: 20.8%; height: 7.4%;  border-radius: 8px; }
+#btn-ps-blank  { top: 67.5%; left: 60.8%; width: 20.8%; height: 7.4%;  border-radius: 8px; }
+
+/* Debug mode: show button hitboxes as red transparent with labels. */
+.remote-wrap.debug .remote-btn {
+    background: rgba(255, 0, 0, 0.3);
+    border: 1px solid rgba(255, 0, 0, 0.7);
+    color: #fff;
+    font-size: 8px;
+    font-family: Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 0 2px #000;
+    font-weight: bold;
+}
+
+.remote-wrap.debug .remote-btn:hover {
+    background: rgba(255, 0, 0, 0.5);
+}
+
+.remote-wrap.debug .remote-btn:active {
+    background: rgba(255, 255, 0, 0.4);
+}
+
+.remote-wrap.debug .remote-btn.debug-selected {
+    background: rgba(0, 120, 255, 0.35);
+    border-color: rgba(0, 120, 255, 0.8);
+}
+
+.debug-export-btn {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2196f3;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    z-index: 10;
+}
+
+.debug-export-btn:hover {
+    background: #1976d2;
+}
+
+.debug-output {
+    position: absolute;
+    bottom: -220px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 340px;
+    height: 170px;
+    background: rgba(0, 0, 0, 0.9);
+    color: #0f0;
+    font-family: monospace;
+    font-size: 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 6px;
+    resize: none;
+    z-index: 10;
+}
