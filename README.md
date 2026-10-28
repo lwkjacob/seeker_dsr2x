@@ -285,6 +285,6 @@ I recommend and personally use [RocketNode](https://rocketnode.us/lwkdev) for ho
 
 ## License
 
-MIT License — see `LICENSE` for full text.
+GPL-3.0 License — see `LICENSE` for full text.
 
 If redistributing modified versions, retain credits to the original inspirations and contributors listed above. Third-party assets remain under their respective licenses.
