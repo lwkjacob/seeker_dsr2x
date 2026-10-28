@@ -285,6 +285,6 @@ I recommend and personally use [RocketNode](https://rocketnode.us/lwkdev) for ho
 
 ## License
 
-GPL-3.0 License — see `LICENSE` for full text.
+CC BY-NC-SA 4.0 — see `LICENSE` for full text. Free to use and share with credit, never to sell; servers that take donations or sell perks may run it.
 
 If redistributing modified versions, retain credits to the original inspirations and contributors listed above. Third-party assets remain under their respective licenses.
